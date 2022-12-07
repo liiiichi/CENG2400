@@ -41,39 +41,7 @@ volatile uint32_t ui8AdjustLow;
 volatile uint32_t ui8AdjustUp;
 volatile uint32_t ui32Load;
 
-void str_to_value(){
-    int i = 0;
-    ui8AdjustLow = 0;
-    ui8AdjustUp = 0;
-    char up[4];
-    char low[4];
-    while(angle[i] == 'S'){
-        i++;
-    }
-    while((angle[i] >= '0' && angle[i] <= '9')){
-        up[i] = angle[i];
-        i++;
-    }
-    up[i] = '\0';
-    i++;
-    int j = 0;
-    while((angle[i] >= '0' && angle[i] <= '9')){
-        low[j++] = angle[i++];
-    }
-    low[j] = '\0';
-
-    int len1 = strlen(up);
-    int len2 = strlen(low);
-
-    for(i = 0; i<len1; i++){
-        //ui8AdjustUp = ui8AdjustUp + ((up[len1 - (i + 1)] - '0') * pow(10, i));
-        ui8AdjustUp = ui8AdjustUp * 10 + (up[i]-48);
-    }
-    for(i = 0; i<len2; i++){
-        //ui8AdjustLow = ui8AdjustLow + ((low[len2 - (i + 1)] - '0') * pow(10, i));
-        ui8AdjustLow = ui8AdjustLow * 10 + (low[i] -48);
-    }
-}
+void str_to_value();
 
 int main()
 {
@@ -84,6 +52,7 @@ int main()
     ui8AdjustLow = 83; //26-141
     ui8AdjustUp = 83; //35-150
 
+    // init tht sys ctl
     SysCtlClockSet(SYSCTL_SYSDIV_5|SYSCTL_USE_PLL|SYSCTL_OSC_MAIN|SYSCTL_XTAL_16MHZ);
     SysCtlPWMClockSet(SYSCTL_PWMDIV_64);
 
@@ -192,13 +161,13 @@ void UART5IntHandler(void)
 
     while(UARTCharsAvail(UART5_BASE)) //loop while there are chars
     {
-        angle[flag] = UARTCharGetNonBlocking(UART5_BASE);
-        UARTCharPut(UART0_BASE, angle[flag]);
+        angle[flag] = UARTCharGetNonBlocking(UART5_BASE);// get the string from master
+        UARTCharPut(UART0_BASE, angle[flag]); // show in serial terminal for debug
         flag++;
         //UARTCharPut(UART0_BASE, angle[flag] = UARTCharGet(UART5_BASE));
         //SysCtlDelay(SysCtlClockGet() / (1000 * 3)); //delay some time
     }
-    str_to_value();
+    str_to_value(); // convert the string get from above the angle value
     if(ui8AdjustLow < 26) // set the working zone from -90 to 90
     {
         ui8AdjustLow = 26;
@@ -216,10 +185,42 @@ void UART5IntHandler(void)
     {
         ui8AdjustUp = 150;
     }
-    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8AdjustLow * ui32Load/1000);
+    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8AdjustLow * ui32Load/1000); // control servo1 to specific angle using pwm
 
-    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8AdjustUp * ui32Load/1000);
+    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8AdjustUp * ui32Load/1000); // control servo 2 to specific angle using pwm
+}
 
+//using to function can convert string in specific protocol to angle value
+void str_to_value(){
+    int i = 0;
+    ui8AdjustLow = 0;
+    ui8AdjustUp = 0;
+    char up[4];
+    char low[4];
+    while(angle[i] == 'S'){
+        i++;
+    }
+    while((angle[i] >= '0' && angle[i] <= '9')){
+        up[i] = angle[i];
+        i++;
+    }
+    up[i] = '\0';
+    i++;
+    int j = 0;
+    while((angle[i] >= '0' && angle[i] <= '9')){
+        low[j++] = angle[i++];
+    }
+    low[j] = '\0';
 
+    int len1 = strlen(up);
+    int len2 = strlen(low);
 
+    for(i = 0; i<len1; i++){
+        //ui8AdjustUp = ui8AdjustUp + ((up[len1 - (i + 1)] - '0') * pow(10, i));
+        ui8AdjustUp = ui8AdjustUp * 10 + (up[i]-48);
+    }
+    for(i = 0; i<len2; i++){
+        //ui8AdjustLow = ui8AdjustLow + ((low[len2 - (i + 1)] - '0') * pow(10, i));
+        ui8AdjustLow = ui8AdjustLow * 10 + (low[i] -48);
+    }
 }
